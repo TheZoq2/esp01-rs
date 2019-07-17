@@ -1,0 +1,12 @@
+[package]
+authors = ["TheZoq2 <frans.skarman@gmail.com>"]
+edition = "2018"
+name = "esp8266"
+version = "0.1.0"
+
+[dependencies]
+embedded-hal = "0.2.3"
+arrayvec = "0.4.11"
+nb = "0.1.2"
+void = "1.0.2"
+itoa = "0.4.4"
