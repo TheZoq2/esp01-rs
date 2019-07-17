@@ -1,8 +1,12 @@
 [package]
-authors = ["TheZoq2 <frans.skarman@gmail.com>"]
+authors = ["TheZoq2 <frans.skarman@protonmail.com>"]
 edition = "2018"
-name = "esp8266"
+name = "esp01"
 version = "0.1.0"
+description = "Crate to communicate with the esp01 variant of the esp8266 module"
+readme = "README.md"
+keywords = ["embedded-hal", "esp8266", "esp01"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 embedded-hal = "0.2.3"
