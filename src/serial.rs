@@ -1,7 +1,7 @@
 use embedded_hal as hal;
 use nb::{self, block};
 
-use crate::timing::CountDown;
+use crate::timing::{Millisecond, LongTimer};
 
 
 #[derive(Debug)]
@@ -12,13 +12,13 @@ pub enum Error<E> {
     TimedOut,
 }
 
-pub fn read_with_timeout<S, T, Time>(
+pub fn read_with_timeout<S, T>(
     serial: &mut S,
     timer: &mut T,
-    timeout: Time,
+    timeout: Millisecond,
 ) -> Result<u8, Error<S::Error>>
 where
-    T: CountDown<Time>,
+    T: LongTimer,
     S: hal::serial::Read<u8>,
 {
     timer.start(timeout);
@@ -50,18 +50,17 @@ where
 
 /**
 */
-pub fn read_until_message<S, T, C, R, Time>(
+pub fn read_until_message<S, T, C, R>(
     rx: &mut S,
     timer: &mut T,
-    timeout: Time,
+    timeout: Millisecond,
     buffer: &mut [u8],
     parser: &C
 ) -> Result<R, Error<S::Error>>
 where
-    T: CountDown<Time>,
+    T: LongTimer,
     S: hal::serial::Read<u8>,
     C: Fn(&[u8], usize) -> Option<R>,
-    Time: Copy
 {
     let mut ptr = 0;
     loop {

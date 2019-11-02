@@ -12,7 +12,7 @@ use itoa;
 mod serial;
 mod timing;
 
-use timing::{CountDown, Second, Millisecond, Microsecond};
+pub use timing::{LongTimer, Second, Millisecond};
 
 /**
     Maximum length of an AT response (Length of message + CRLF)
@@ -41,11 +41,13 @@ pub enum ATResponse {
   `R` and `T` are the error types of the serial module
 */
 #[derive(Debug)]
-pub enum Error<R, T> {
+pub enum Error<R, T, P> {
     /// Serial transmission errors
     TxError(T),
     /// Serial reception errors
     RxError(R),
+    // Digital pin errors
+    PinError(P),
     /// Invalid or unexpected data received from the device
     UnexpectedResponse(ATResponse),
     /// Errors from the formating of messages
@@ -53,13 +55,13 @@ pub enum Error<R, T> {
     /// Error indicating an ArrayString wasn't big enough
     Capacity(CapacityError)
 }
-impl<R,T> From<fmt::Error> for Error<R,T>{
-    fn from(other: fmt::Error) -> Error<R,T> {
+impl<R,T, P> From<fmt::Error> for Error<R,T, P> {
+    fn from(other: fmt::Error) -> Error<R,T, P> {
         Error::Fmt(other)
     }
 }
-impl<R,T,ErrType> From<CapacityError<ErrType>> for Error<R,T>{
-    fn from(other: CapacityError<ErrType>) -> Error<R,T> {
+impl<R,T,ErrType,P> From<CapacityError<ErrType>> for Error<R,T,P> {
+    fn from(other: CapacityError<ErrType>) -> Error<R,T,P> {
         Error::Capacity(other.simplify())
     }
 }
@@ -78,13 +80,13 @@ pub enum TransmissionStep {
   Error indicating failure to transmit a message.
 */
 #[derive(Debug)]
-pub struct TransmissionError<R, T> {
+pub struct TransmissionError<R, T, P> {
     step: TransmissionStep,
-    cause: Error<R, T>
+    cause: Error<R, T, P>
 }
 
-impl<R, T> TransmissionError<R, T> {
-    pub fn try_step<RetType>(step: TransmissionStep, cause: Result<RetType, Error<R, T>>) 
+impl<R, T, P> TransmissionError<R, T, P> {
+    pub fn try_step<RetType>(step: TransmissionStep, cause: Result<RetType, Error<R, T, P>>) 
         -> Result<RetType, Self>
     {
         cause.map_err(|e| {
@@ -113,13 +115,13 @@ impl ConnectionType {
 
 macro_rules! return_type {
     ($ok:ty) => {
-        Result<$ok, Error<serial::Error<Rx::Error>, Tx::Error>>
+        Result<$ok, Error<serial::Error<Rx::Error>, Tx::Error, Rst::Error>>
     }
 }
 
 macro_rules! transmission_return_type {
     ($ok:ty) => {
-        Result<$ok, TransmissionError<serial::Error<Rx::Error>, Tx::Error>>
+        Result<$ok, TransmissionError<serial::Error<Rx::Error>, Tx::Error, Rst::Error>>
     }
 }
 
@@ -137,9 +139,8 @@ const DEFAULT_TIMEOUT: Second = Second(5);
 pub struct Esp8266<Tx, Rx, Timer, Rst>
 where Tx: hal::serial::Write<u8>,
       Rx: hal::serial::Read<u8>,
-      Timer: CountDown<Millisecond>,
-      Timer: CountDown<Microsecond>,
-      Rst: hal::digital::OutputPin
+      Timer: LongTimer,
+      Rst: hal::digital::v2::OutputPin
 {
     tx: Tx,
     rx: Rx,
@@ -150,11 +151,9 @@ where Tx: hal::serial::Write<u8>,
 impl<Tx, Rx, Timer, Rst> Esp8266<Tx, Rx, Timer, Rst>
 where Tx: hal::serial::Write<u8>,
       Rx: hal::serial::Read<u8>,
-      Timer: CountDown<Millisecond>,
-      Timer: CountDown<Microsecond>,
-      Rst: hal::digital::OutputPin
+      Timer: LongTimer,
+      Rst: hal::digital::v2::OutputPin,
 {
-
     /**
       Sets up the esp8266 struct and configures the device for future use
 
@@ -198,15 +197,15 @@ where Tx: hal::serial::Write<u8>,
     /**
       Turns off the device by setting chip_enable to 0
     */
-    pub fn power_down(&mut self) {
-        self.chip_enable_pin.set_low();
+    pub fn power_down(&mut self) -> return_type!(()) {
+        self.chip_enable_pin.set_low().map_err(Error::PinError)
     }
 
     /**
       Resets the device by setting chip_enable to 0 and then back to 1
     */
     pub fn reset(&mut self) -> return_type!(()) {
-        self.power_down();
+        self.power_down()?;
         self.timer.start(Millisecond(10));
         block!(self.timer.wait()).unwrap();
         self.power_up()
@@ -216,7 +215,7 @@ where Tx: hal::serial::Write<u8>,
       Turns the device back on by setting chip_enable to high
     */
     pub fn power_up(&mut self) -> return_type!(()) {
-        self.chip_enable_pin.set_high();
+        self.chip_enable_pin.set_high().map_err(Error::PinError)?;
 
         // The esp01 sends a bunch of garbage over the serial port before starting properly,
         // therefore we need to retry this until we get valid data or time out
@@ -244,12 +243,12 @@ where Tx: hal::serial::Write<u8>,
         Ok(())
     }
 
-    pub fn pull_some_current(&mut self) {
-        self.chip_enable_pin.set_high();
+    pub fn pull_some_current(&mut self) -> return_type!(()) {
+        self.chip_enable_pin.set_high().map_err(Error::PinError)?;
 
         self.timer.start(Millisecond(500));
         block!(self.timer.wait()).unwrap();
-        self.chip_enable_pin.set_low();
+        self.chip_enable_pin.set_low().map_err(Error::PinError)
     }
 
     fn transmit_data(&mut self, data: &str) -> return_type!(()) {

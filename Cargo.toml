@@ -10,7 +10,6 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 embedded-hal = "0.2.3"
-arrayvec = "0.4.11"
+arrayvec = {version = "0.4.11", default-features = false}
 nb = "0.1.2"
-void = "1.0.2"
-itoa = "0.4.4"
+itoa = {version = "0.4.4", default-features = false}
