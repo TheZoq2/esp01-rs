@@ -2,7 +2,7 @@
 authors = ["TheZoq2 <frans.skarman@protonmail.com>"]
 edition = "2018"
 name = "esp-01"
-version = "0.1.0"
+version = "0.1.1"
 description = "Crate to communicate with the esp01 variant of the esp8266 module"
 readme = "README.md"
 keywords = ["embedded-hal", "esp8266", "esp01"]
