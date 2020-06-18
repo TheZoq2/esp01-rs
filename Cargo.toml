@@ -7,6 +7,7 @@ description = "Crate to communicate with the esp01 variant of the esp8266 module
 readme = "README.md"
 keywords = ["embedded-hal", "esp8266", "esp01"]
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/TheZoq2/esp01-rs"
 
 [dependencies]
 embedded-hal = "0.2.3"
