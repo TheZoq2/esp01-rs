@@ -1,7 +1,7 @@
 [package]
 authors = ["TheZoq2 <frans.skarman@protonmail.com>"]
 edition = "2018"
-name = "esp01"
+name = "esp-01"
 version = "0.1.0"
 description = "Crate to communicate with the esp01 variant of the esp8266 module"
 readme = "README.md"
